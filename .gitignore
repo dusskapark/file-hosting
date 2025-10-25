@@ -1,0 +1,25 @@
+# Dependencies
+node_modules/
+package-lock.json
+
+# Files
+*.msi
+*.exe
+*.dmg
+*.pkg
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+
+# Environment
+.env
+.env.local
+.envrc
+
+# IDE
+.vscode/
+.idea/

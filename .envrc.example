@@ -1,0 +1,30 @@
+# direnv environment configuration
+# Automatically loaded when entering this directory
+
+# Load NVM and auto-set Node.js version
+if [ -f .nvmrc ]; then
+  export NVM_DIR="$HOME/.nvm"
+  
+  # Load NVM
+  [ -s "$NVM_DIR/nvm.sh" ] && source "$NVM_DIR/nvm.sh"
+  [ -s "/opt/homebrew/opt/nvm/nvm.sh" ] && source "/opt/homebrew/opt/nvm/nvm.sh"
+  
+  # Use version defined in .nvmrc
+  nvm use
+  
+  echo "✅ Node.js $(node -v) activated"
+fi
+
+## Ngrok
+# Get your free authtoken from: https://dashboard.ngrok.com/get-started/your-authtoken
+export NGROK_AUTHTOKEN=your_token_here
+
+# Project environment variables
+export PORT=8080
+export NODE_ENV=development
+
+# Optional: Add node_modules/.bin to PATH
+PATH_add node_modules/.bin
+
+echo "🚀 msi-file-hosting environment loaded"
+
