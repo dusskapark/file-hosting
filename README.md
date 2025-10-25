@@ -83,7 +83,35 @@ msi-file-hosting/
     └── your-files      # Place your files here
 ```
 
-## direnv Setup
+## Environment Setup
+
+### Windows 사용자 (dotenv 사용)
+
+프로젝트에 이미 `dotenv` 패키지가 설정되어 있어서 Windows에서 쉽게 사용할 수 있습니다.
+
+**첫 설정 (한 번만):**
+```powershell
+# 1. .env 파일 생성 (프로젝트 루트에)
+# 파일 내용:
+NGROK_AUTHTOKEN=your_token_here
+PORT=8080
+NODE_ENV=development
+USE_NGROK=true
+
+# 2. ngrok authtoken 받기
+# https://dashboard.ngrok.com/get-started/your-authtoken
+# .env 파일에서 your_token_here를 실제 토큰으로 변경
+
+# 3. 의존성 설치
+npm install
+
+# 4. 서버 시작
+npm start
+```
+
+**Tip:** `.env.example` 파일을 복사해서 사용하세요!
+
+### macOS/Linux 사용자 (direnv 사용)
 
 The project includes `.envrc` file that automatically:
 - Activates Node.js version (v22.21.0)
@@ -178,14 +206,30 @@ npm start
 
 ## Troubleshooting
 
-### direnv not found:
+### Windows에서 .env 파일이 안 보여요:
+Windows 탐색기에서 `.env` 파일이 숨김 파일로 표시될 수 있습니다.
+```powershell
+# VS Code나 메모장으로 .env 파일 생성
+notepad .env
+
+# 또는 PowerShell에서
+New-Item -Path .env -ItemType File
+```
+
+### Windows에서 Port 8080이 이미 사용 중:
+```powershell
+# PowerShell (관리자 권한 필요)
+Get-Process -Id (Get-NetTCPConnection -LocalPort 8080).OwningProcess | Stop-Process -Force
+```
+
+### macOS/Linux: direnv not found:
 ```bash
 brew install direnv
 echo 'eval "$(direnv hook zsh)"' >> ~/.zshrc
 source ~/.zshrc
 ```
 
-### Port 8080 already in use:
+### macOS/Linux: Port 8080 already in use:
 ```bash
 lsof -ti:8080 | xargs kill -9
 ```

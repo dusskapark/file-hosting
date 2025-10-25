@@ -16,6 +16,7 @@
   "dependencies": {
     "express": "^4.19.2",
     "compression": "^1.7.4",
-    "@ngrok/ngrok": "^1.4.1"
+    "@ngrok/ngrok": "^1.4.1",
+    "dotenv": "^16.4.5"
   }
 }

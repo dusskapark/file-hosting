@@ -1,6 +1,12 @@
+// Load environment variables from .env file
+require('dotenv').config();
+
 const express = require('express');
 const compression = require('compression');
 const path = require('path');
+const fs = require('fs');
+const { exec } = require('child_process');
+const readline = require('readline');
 const ngrok = require('@ngrok/ngrok');
 
 const app = express();
@@ -50,13 +56,13 @@ app.get('/health', (req, res) => {
 
 // 404 handler
 app.use((req, res) => {
+  const availableFiles = getAvailableFiles();
   res.status(404).json({ 
     error: 'File not found',
     path: req.url,
-    availableEndpoints: [
-      '/1.1.0/your-file.ext',
-      '/health'
-    ]
+    availableEndpoints: availableFiles.length > 0 
+      ? [...availableFiles, '/health']
+      : ['/health', '(Add files to version directories like 1.1.0/)']
   });
 });
 
@@ -69,8 +75,127 @@ app.use((err, req, res, next) => {
   });
 });
 
-app.listen(PORT, '0.0.0.0', async () => {
-  console.log(`
+// Helper function to scan for available files
+function getAvailableFiles() {
+  const files = [];
+  try {
+    const entries = fs.readdirSync(__dirname, { withFileTypes: true });
+    
+    for (const entry of entries) {
+      if (entry.isDirectory() && !entry.name.startsWith('.') && entry.name !== 'node_modules') {
+        const versionPath = path.join(__dirname, entry.name);
+        const versionFiles = fs.readdirSync(versionPath, { withFileTypes: true });
+        
+        for (const file of versionFiles) {
+          if (file.isFile()) {
+            files.push(`/${entry.name}/${file.name}`);
+          }
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Error scanning files:', error.message);
+  }
+  return files;
+}
+
+// Helper function to check if port is in use and handle it
+function checkAndHandlePortConflict(port) {
+  return new Promise((resolve, reject) => {
+    const isWindows = process.platform === 'win32';
+    
+    if (isWindows) {
+      // Windows: Use Get-NetTCPConnection
+      const command = `powershell -Command "Get-NetTCPConnection -LocalPort ${port} -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess"`;
+      
+      exec(command, (error, stdout, stderr) => {
+        if (error || !stdout.trim()) {
+          // Port is free
+          resolve(true);
+          return;
+        }
+        
+        const pid = stdout.trim();
+        console.log(`\n⚠️  Port ${port} is already in use by process (PID: ${pid})`);
+        
+        // Ask user what to do
+        const rl = readline.createInterface({
+          input: process.stdin,
+          output: process.stdout
+        });
+        
+        rl.question('Do you want to kill the process and continue? (y/N): ', (answer) => {
+          rl.close();
+          
+          if (answer.toLowerCase() === 'y' || answer.toLowerCase() === 'yes') {
+            console.log(`\n🔄 Killing process ${pid}...`);
+            exec(`taskkill /PID ${pid} /F`, (killError) => {
+              if (killError) {
+                console.error(`❌ Failed to kill process: ${killError.message}`);
+                reject(new Error('Failed to kill process'));
+              } else {
+                console.log('✅ Process killed successfully');
+                // Wait a bit for the port to be released
+                setTimeout(() => resolve(true), 1000);
+              }
+            });
+          } else {
+            console.log('\n❌ Server startup cancelled by user');
+            reject(new Error('Port conflict - user chose not to kill process'));
+          }
+        });
+      });
+    } else {
+      // macOS/Linux: Use lsof
+      const command = `lsof -ti:${port}`;
+      
+      exec(command, (error, stdout, stderr) => {
+        if (error || !stdout.trim()) {
+          // Port is free
+          resolve(true);
+          return;
+        }
+        
+        const pid = stdout.trim();
+        console.log(`\n⚠️  Port ${port} is already in use by process (PID: ${pid})`);
+        
+        const rl = readline.createInterface({
+          input: process.stdin,
+          output: process.stdout
+        });
+        
+        rl.question('Do you want to kill the process and continue? (y/N): ', (answer) => {
+          rl.close();
+          
+          if (answer.toLowerCase() === 'y' || answer.toLowerCase() === 'yes') {
+            console.log(`\n🔄 Killing process ${pid}...`);
+            exec(`kill -9 ${pid}`, (killError) => {
+              if (killError) {
+                console.error(`❌ Failed to kill process: ${killError.message}`);
+                reject(new Error('Failed to kill process'));
+              } else {
+                console.log('✅ Process killed successfully');
+                setTimeout(() => resolve(true), 1000);
+              }
+            });
+          } else {
+            console.log('\n❌ Server startup cancelled by user');
+            reject(new Error('Port conflict - user chose not to kill process'));
+          }
+        });
+      });
+    }
+  });
+}
+
+// Start server with port conflict handling
+async function startServer() {
+  try {
+    // Check for port conflict before starting
+    await checkAndHandlePortConflict(PORT);
+    
+    app.listen(PORT, '0.0.0.0', async () => {
+      console.log(`
 ╔═══════════════════════════════════════════════════════╗
 ║   File Hosting Server Running                        ║
 ╚═══════════════════════════════════════════════════════╝
@@ -91,6 +216,7 @@ Node.js: ${process.version}
       });
       
       const publicUrl = listener.url();
+      const availableFiles = getAvailableFiles();
       
       console.log(`
 ╔═══════════════════════════════════════════════════════╗
@@ -98,8 +224,18 @@ Node.js: ${process.version}
 ╚═══════════════════════════════════════════════════════╝
 
 Public URL: ${publicUrl}
-Example File: ${publicUrl}/1.1.0/your-file.ext
+`);
 
+      if (availableFiles.length > 0) {
+        console.log('📦 Available Files:');
+        availableFiles.forEach(file => {
+          console.log(`   ${publicUrl}${file}`);
+        });
+      } else {
+        console.log('⚠️  No files found. Add files to version directories (e.g., 1.1.0/)');
+      }
+
+      console.log(`
 ✅ Server is ready!
 ⚠️  First-time visitors may see ngrok warning page (click "Visit Site")
 
@@ -107,23 +243,64 @@ Stop Server: Ctrl+C
       `);
     } catch (error) {
       console.error('\n❌ Failed to start ngrok:', error.message);
+      const availableFiles = getAvailableFiles();
+      
       console.log(`
 ⚠️  Ngrok failed, but server is still running locally.
 
 Local URL: http://localhost:${PORT}
-Example File: http://localhost:${PORT}/1.1.0/your-file.ext
+`);
 
+      if (availableFiles.length > 0) {
+        console.log('📦 Available Files:');
+        availableFiles.forEach(file => {
+          console.log(`   http://localhost:${PORT}${file}`);
+        });
+      }
+
+      console.log(`
 To disable ngrok: USE_NGROK=false npm start
       `);
     }
   } else {
+    const availableFiles = getAvailableFiles();
+    
     console.log(`
 Local Mode (ngrok disabled)
 
 Local URL: http://localhost:${PORT}
-Example File: http://localhost:${PORT}/1.1.0/your-file.ext
+`);
 
+    if (availableFiles.length > 0) {
+      console.log('📦 Available Files:');
+      availableFiles.forEach(file => {
+        console.log(`   http://localhost:${PORT}${file}`);
+      });
+    } else {
+      console.log('⚠️  No files found. Add files to version directories (e.g., 1.1.0/)');
+    }
+
+    console.log(`
 To enable ngrok: npm start (or USE_NGROK=true npm start)
     `);
   }
+    });
+  } catch (error) {
+    console.error('\n❌ Failed to start server:', error.message);
+    process.exit(1);
+  }
+}
+
+// Handle server errors
+app.on('error', (error) => {
+  if (error.code === 'EADDRINUSE') {
+    console.error(`\n❌ Port ${PORT} is already in use`);
+    console.log('Please close the other application or change the PORT in .env file');
+  } else {
+    console.error('\n❌ Server error:', error);
+  }
+  process.exit(1);
 });
+
+// Start the server
+startServer();
