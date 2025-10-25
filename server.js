@@ -21,8 +21,11 @@ app.use((req, res, next) => {
 // Serve static files from root directory
 app.use(express.static(__dirname, {
   setHeaders: (res, filepath) => {
-    // Configure .msi file download headers
-    if (filepath.endsWith('.msi')) {
+    // Configure binary file download headers
+    const binaryExtensions = ['.msi', '.exe', '.dmg', '.pkg', '.deb', '.rpm'];
+    const isBinary = binaryExtensions.some(ext => filepath.endsWith(ext));
+    
+    if (isBinary) {
       const filename = path.basename(filepath);
       res.set('Content-Type', 'application/octet-stream');
       res.set('Content-Disposition', `attachment; filename="${filename}"`);
@@ -51,7 +54,7 @@ app.use((req, res) => {
     error: 'File not found',
     path: req.url,
     availableEndpoints: [
-      '/1.1.0/file.msi',
+      '/1.1.0/your-file.ext',
       '/health'
     ]
   });
@@ -69,7 +72,7 @@ app.use((err, req, res, next) => {
 app.listen(PORT, '0.0.0.0', async () => {
   console.log(`
 ╔═══════════════════════════════════════════════════════╗
-║   MSI File Hosting Server Running                    ║
+║   File Hosting Server Running                        ║
 ╚═══════════════════════════════════════════════════════╝
 
 Local URL: http://localhost:${PORT}
@@ -88,7 +91,6 @@ Node.js: ${process.version}
       });
       
       const publicUrl = listener.url();
-      const msiUrl = `${publicUrl}/1.1.0/KleverDesktop-1.1.0.msi`;
       
       console.log(`
 ╔═══════════════════════════════════════════════════════╗
@@ -96,7 +98,7 @@ Node.js: ${process.version}
 ╚═══════════════════════════════════════════════════════╝
 
 Public URL: ${publicUrl}
-MSI Download: ${msiUrl}
+Example File: ${publicUrl}/1.1.0/your-file.ext
 
 ✅ Server is ready!
 ⚠️  First-time visitors may see ngrok warning page (click "Visit Site")
@@ -109,7 +111,7 @@ Stop Server: Ctrl+C
 ⚠️  Ngrok failed, but server is still running locally.
 
 Local URL: http://localhost:${PORT}
-MSI File: http://localhost:${PORT}/1.1.0/KleverDesktop-1.1.0.msi
+Example File: http://localhost:${PORT}/1.1.0/your-file.ext
 
 To disable ngrok: USE_NGROK=false npm start
       `);
@@ -119,7 +121,7 @@ To disable ngrok: USE_NGROK=false npm start
 Local Mode (ngrok disabled)
 
 Local URL: http://localhost:${PORT}
-MSI File: http://localhost:${PORT}/1.1.0/KleverDesktop-1.1.0.msi
+Example File: http://localhost:${PORT}/1.1.0/your-file.ext
 
 To enable ngrok: npm start (or USE_NGROK=true npm start)
     `);

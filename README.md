@@ -1,16 +1,18 @@
-# MSI File Hosting Server
+# File Hosting Server Study Project
 
-Temporary server for hosting 250MB MSI files with HTTPS for MS Store verification.
+A study project for learning how to host and serve large files over HTTPS using Node.js and tunneling services.
 
-## Requirements Met
+## Features
 
-- ✅ HTTPS (via ngrok)
-- ✅ `/1.1.0/file.msi` path structure
-- ✅ Port 443 (automatic via ngrok)
+- ✅ HTTPS support (via ngrok)
+- ✅ Static file serving with custom headers
+- ✅ Gzip compression for optimization
+- ✅ Directory-based URL structure
+- ✅ CORS enabled
 - ✅ No redirects
 - ✅ Public download access
-- ✅ 250MB large file support
-- ✅ Completely free
+- ✅ Large file support (tested with 250MB+)
+- ✅ Completely free setup
 
 ## Quick Start
 
@@ -25,10 +27,12 @@ cd ~/Sites/msi-file-hosting
 npm install
 ```
 
-### 3️⃣ Place MSI File
+### 3️⃣ Place Your Files
 ```bash
-# Copy your file to the 1.1.0 folder
-cp /path/to/your/installer.msi ./1.1.0/file.msi
+# Create version directories and add your files
+mkdir -p 1.1.0
+cp /path/to/your/file.exe ./1.1.0/
+cp /path/to/your/file.dmg ./1.1.0/
 ```
 
 ### 4️⃣ Start Server with ngrok (One Command!)
@@ -48,7 +52,7 @@ That's it! The server will automatically:
 ╚═══════════════════════════════════════════════════════╝
 
 Public URL: https://xxxx.ngrok-free.app
-MSI Download: https://xxxx.ngrok-free.app/1.1.0/KleverDesktop-1.1.0.msi
+File Download: https://xxxx.ngrok-free.app/1.1.0/your-file.exe
 ```
 
 ### Optional: Run Without ngrok
@@ -64,31 +68,54 @@ USE_NGROK=false npm start
 - **Compression** v1.7.4 - Gzip compression
 - **@ngrok/ngrok** v1.4.1 - Integrated HTTPS tunneling
 
+## Project Structure
+
+```
+msi-file-hosting/
+├── .envrc              # direnv config (git ignored - contains secrets)
+├── .envrc.example      # Template for environment setup
+├── .nvmrc              # Node version (v22.21.0)
+├── .gitignore          # Git ignore rules
+├── package.json        # NPM config
+├── server.js           # Express server
+├── README.md           # This file
+└── 1.1.0/              # Example version directory
+    └── your-files      # Place your files here
+```
+
 ## direnv Setup
 
 The project includes `.envrc` file that automatically:
 - Activates Node.js version (v22.21.0)
-- Sets environment variables (PORT=8080)
+- Sets environment variables (PORT=8080, NGROK_AUTHTOKEN)
 - Adds node_modules/.bin to PATH
 
-**First time use:**
+**First time setup:**
 ```bash
+# 1. Copy the example file
+cp .envrc.example .envrc
+
+# 2. Add your ngrok authtoken
+# Get it from: https://dashboard.ngrok.com/get-started/your-authtoken
+# Edit .envrc and replace "your_token_here" with your actual token
+
+# 3. Allow direnv to load it
 direnv allow
 ```
 
-## Directory Structure
+## File Serving Configuration
 
-```
-msi-file-hosting/
-├── .envrc              # direnv config
-├── .nvmrc              # Node version (v22.21.0)
-├── package.json        # NPM config
-├── server.js           # Express server
-├── README.md           # This file
-├── .gitignore          # Git ignore rules
-└── 1.1.0/              # File directory
-    └── file.msi        # Place your MSI file here
-```
+The server automatically sets appropriate headers for different file types:
+
+### Binary Files (`.msi`, `.exe`, `.dmg`, `.pkg`)
+- Content-Type: `application/octet-stream`
+- Content-Disposition: `attachment` (triggers download)
+- X-Content-Type-Options: `nosniff`
+
+### All Files
+- Cache-Control: `public, max-age=3600` (1 hour)
+- Access-Control-Allow-Origin: `*` (CORS enabled)
+- Gzip compression enabled
 
 ## Useful Commands
 
@@ -122,7 +149,7 @@ lsof -ti:8080 | xargs kill -9
 - 🚀 Automatically starts with `npm start`
 - 🔗 No separate terminal needed
 - 📋 URL displayed in console automatically
-- ⚙️ Optional: Set `NGROK_AUTHTOKEN` env var for authenticated sessions
+- ⚙️ Requires `NGROK_AUTHTOKEN` env var (free)
 
 ### Free Plan:
 - ⏱️ Session: 8 hours (can restart)
@@ -130,10 +157,17 @@ lsof -ti:8080 | xargs kill -9
 - 📊 Bandwidth/File size: Unlimited
 - ⚠️ Warning page on first visit (click "Visit Site")
 
-### Optional: ngrok Authentication (for static URLs)
+### Optional: ngrok Authentication Setup
 ```bash
-# Get free authtoken from https://dashboard.ngrok.com/get-started/your-authtoken
+# 1. Sign up for free: https://dashboard.ngrok.com/signup
+# 2. Get authtoken: https://dashboard.ngrok.com/get-started/your-authtoken
+# 3. Add to .envrc:
 export NGROK_AUTHTOKEN="your_token_here"
+
+# 4. Reload environment
+direnv allow
+
+# 5. Start server
 npm start
 ```
 
@@ -166,22 +200,49 @@ nvm use
 1. ✅ Check local server: `curl http://localhost:8080/health`
 2. ✅ Check console output: ngrok URL should be displayed
 3. ✅ Run without ngrok to test: `USE_NGROK=false npm start`
-4. ✅ Check firewall settings
+4. ✅ Verify NGROK_AUTHTOKEN is set: `echo $NGROK_AUTHTOKEN`
+5. ✅ Check firewall settings
 
-### MS Store upload failures:
-- Verify file path accuracy: `/1.1.0/file.msi`
-- Ensure HTTPS is used (HTTP will be rejected)
-- Verify no redirects occur
-- Test file accessibility: Direct download in browser
+### ngrok authtoken error:
+```
+Error: Usage of ngrok requires a verified account and authtoken
+```
 
-## Production Alternatives (For Repeated Use)
+**Solution:**
+1. Get free authtoken from https://dashboard.ngrok.com/signup
+2. Add to `.envrc`: `export NGROK_AUTHTOKEN="your_token"`
+3. Run: `direnv allow`
+4. Restart server
 
-| Service | Price | Capacity | Suitability |
-|---------|-------|----------|-------------|
-| **GitHub Releases** | Free | 2GB | ⭐⭐⭐⭐ |
-| **Cloudflare R2** | Free | 10GB | ⭐⭐⭐⭐⭐ |
-| **DigitalOcean Spaces** | $5/mo | 250GB | ⭐⭐⭐⭐ |
+## Production Alternatives
+
+For production use or repeated hosting needs:
+
+| Service | Price | Capacity | Notes |
+|---------|-------|----------|-------|
+| **GitHub Releases** | Free | 2GB | Great for versioned releases |
+| **Cloudflare R2** | Free | 10GB | S3-compatible, no egress fees |
+| **DigitalOcean Spaces** | $5/mo | 250GB | Simple CDN integration |
+| **AWS S3** | Pay-as-you-go | Unlimited | Industry standard |
+| **Backblaze B2** | Free/Cheap | 10GB free | Very affordable storage |
+
+## Learning Resources
+
+This project demonstrates:
+
+1. **Static File Serving**: Using Express.js static middleware
+2. **Custom Headers**: Setting Content-Type, Cache-Control, CORS
+3. **Compression**: Gzip middleware for performance
+4. **HTTPS Tunneling**: Ngrok integration for local development
+5. **Environment Management**: direnv and NVM
+6. **Error Handling**: 404 and 500 error handlers
+7. **Health Checks**: Basic monitoring endpoint
+8. **Request Logging**: Custom logging middleware
 
 ## License
 
-MIT - Use freely!
+MIT - Use freely for learning and projects!
+
+## Contributing
+
+This is a study project. Feel free to fork and experiment!

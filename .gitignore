@@ -2,11 +2,17 @@
 node_modules/
 package-lock.json
 
-# Files
+# Binary files (installers, executables)
 *.msi
 *.exe
 *.dmg
 *.pkg
+*.deb
+*.rpm
+*.app
+*.zip
+*.tar.gz
+*.rar
 
 # Logs
 *.log
@@ -14,8 +20,9 @@ npm-debug.log*
 
 # OS
 .DS_Store
+Thumbs.db
 
-# Environment
+# Environment (contains secrets)
 .env
 .env.local
 .envrc
@@ -23,3 +30,6 @@ npm-debug.log*
 # IDE
 .vscode/
 .idea/
+*.swp
+*.swo
+*~

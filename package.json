@@ -1,7 +1,7 @@
 {
-  "name": "msi-file-hosting",
+  "name": "file-hosting-server",
   "version": "1.0.0",
-  "description": "Temporary MSI file hosting server for MS Store verification",
+  "description": "A study project for learning how to host and serve large files over HTTPS",
   "main": "server.js",
   "engines": {
     "node": ">=22.0.0"
@@ -10,7 +10,7 @@
     "start": "node server.js",
     "dev": "node --watch server.js"
   },
-  "keywords": ["file-server", "static", "hosting", "msi"],
+  "keywords": ["file-server", "static", "hosting", "https", "ngrok", "study"],
   "author": "",
   "license": "MIT",
   "dependencies": {
