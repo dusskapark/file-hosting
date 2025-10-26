@@ -24,6 +24,27 @@ app.use((req, res, next) => {
   next();
 });
 
+// Serve CSS from public directory
+app.get('/style.css', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'style.css'));
+});
+
+// API endpoint for files data
+app.get('/api/files', (req, res) => {
+  const availableFiles = getAvailableFiles();
+  res.json({
+    files: availableFiles,
+    nodeVersion: process.version,
+    port: PORT,
+    hasNgrok: !!global.ngrokPublicUrl
+  });
+});
+
+// Root route - Serve HTML
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
 // Serve static files from root directory
 app.use(express.static(__dirname, {
   setHeaders: (res, filepath) => {
@@ -216,6 +237,7 @@ Node.js: ${process.version}
       });
       
       const publicUrl = listener.url();
+      global.ngrokPublicUrl = publicUrl; // Store for web UI
       const availableFiles = getAvailableFiles();
       
       console.log(`

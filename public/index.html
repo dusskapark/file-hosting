@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>File Hosting Server</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>📁 File Hosting Server</h1>
+      <p>Simple and Fast File Hosting Service</p>
+    </div>
+    
+    <div class="card">
+      <div class="info-grid">
+        <div class="info-item">
+          <label>Status</label>
+          <strong><span class="status-badge">✓ Running</span></strong>
+        </div>
+        <div class="info-item">
+          <label>Node.js Version</label>
+          <strong id="node-version"></strong>
+        </div>
+        <div class="info-item">
+          <label>Server Port</label>
+          <strong id="server-port"></strong>
+        </div>
+        <div class="info-item">
+          <label>Public URL</label>
+          <strong id="ngrok-status"></strong>
+        </div>
+      </div>
+      
+      <h2 class="section-title">Available Files</h2>
+      
+      <div id="files-container"></div>
+    </div>
+    
+    <div class="footer">
+      <p>File Hosting Server v1.0.0</p>
+      <p>Press Ctrl+C to stop the server</p>
+    </div>
+  </div>
+
+  <script>
+    // Fetch server info and files
+    async function loadData() {
+      try {
+        const response = await fetch('/api/files');
+        const data = await response.json();
+        
+        // Update server info
+        document.getElementById('node-version').textContent = data.nodeVersion;
+        document.getElementById('server-port').textContent = data.port;
+        document.getElementById('ngrok-status').textContent = data.hasNgrok ? '✓ Active' : 'Local Only';
+        
+        // Render files
+        const filesContainer = document.getElementById('files-container');
+        
+        if (data.files.length > 0) {
+          const filesList = document.createElement('ul');
+          filesList.className = 'files-list';
+          
+          data.files.forEach(file => {
+            const fileName = file.split('/').pop();
+            const li = document.createElement('li');
+            li.className = 'file-item';
+            li.innerHTML = `
+              <a href="${file}" class="file-link">
+                <div class="file-info">
+                  <div class="file-name">${fileName}</div>
+                  <div class="file-path">${file}</div>
+                </div>
+                <div class="download-btn">⬇ Download</div>
+              </a>
+            `;
+            filesList.appendChild(li);
+          });
+          
+          filesContainer.appendChild(filesList);
+        } else {
+          filesContainer.innerHTML = `
+            <div class="empty-state">
+              <p>⚠️ No files available</p>
+              <p>Add files to version directories (e.g., <code>1.0.8/</code>)</p>
+            </div>
+          `;
+        }
+      } catch (error) {
+        console.error('Failed to load data:', error);
+        document.getElementById('files-container').innerHTML = `
+          <div class="empty-state">
+            <p>❌ Failed to load data</p>
+          </div>
+        `;
+      }
+    }
+    
+    loadData();
+  </script>
+</body>
+</html>
+
