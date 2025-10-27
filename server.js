@@ -96,27 +96,55 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Helper function to scan for available files
+// Helper function to scan for available files recursively
 function getAvailableFiles() {
   const files = [];
-  try {
-    const entries = fs.readdirSync(__dirname, { withFileTypes: true });
-    
-    for (const entry of entries) {
-      if (entry.isDirectory() && !entry.name.startsWith('.') && entry.name !== 'node_modules') {
-        const versionPath = path.join(__dirname, entry.name);
-        const versionFiles = fs.readdirSync(versionPath, { withFileTypes: true });
+  
+  // Directories to exclude from scanning
+  const excludeDirs = ['node_modules', 'public', '.git', '.vscode', '.idea'];
+  
+  // Only include downloadable binary/installer files
+  const downloadableExtensions = ['.msi', '.exe', '.dmg', '.pkg', '.deb', '.rpm', '.zip', '.tar.gz', '.appimage'];
+  
+  // Files to exclude (project meta files)
+  const excludeFiles = ['package.json', 'package-lock.json', 'README.md', 'server.js', '.env', '.gitignore'];
+  
+  function scanDirectory(dirPath, relativePath = '') {
+    try {
+      const entries = fs.readdirSync(dirPath, { withFileTypes: true });
+      
+      for (const entry of entries) {
+        // Skip hidden files/folders and excluded directories
+        if (entry.name.startsWith('.') || excludeDirs.includes(entry.name)) {
+          continue;
+        }
         
-        for (const file of versionFiles) {
-          if (file.isFile()) {
-            files.push(`/${entry.name}/${file.name}`);
+        const fullPath = path.join(dirPath, entry.name);
+        const relPath = relativePath ? `${relativePath}/${entry.name}` : entry.name;
+        
+        if (entry.isDirectory()) {
+          // Recursively scan subdirectories
+          scanDirectory(fullPath, relPath);
+        } else if (entry.isFile()) {
+          // Only include downloadable files and exclude project meta files
+          const isDownloadable = downloadableExtensions.some(ext => entry.name.toLowerCase().endsWith(ext));
+          const isExcluded = excludeFiles.includes(entry.name);
+          
+          // Include file if it's in a subdirectory and is downloadable, or skip if it's a root project file
+          if (!isExcluded && (relativePath !== '' || isDownloadable)) {
+            // Only add if it's a downloadable file
+            if (isDownloadable) {
+              files.push(`/${relPath}`);
+            }
           }
         }
       }
+    } catch (error) {
+      console.error(`Error scanning directory ${dirPath}:`, error.message);
     }
-  } catch (error) {
-    console.error('Error scanning files:', error.message);
   }
+  
+  scanDirectory(__dirname);
   return files;
 }
 
